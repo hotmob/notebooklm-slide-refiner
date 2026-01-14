@@ -11,3 +11,4 @@ output/
 .cache/
 .pytest_cache/
 .ruff_cache/
+gcp-service-account.json

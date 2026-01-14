@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from urllib.request import urlretrieve
 
@@ -12,20 +13,34 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 FONT_DIR = Path(__file__).parent / "fonts"
-FONT_PATH = FONT_DIR / "NotoSansSC-Regular.otf"
+FONT_PATH = FONT_DIR / "NotoSansSC-Variable.ttf"
 FONT_URL = (
-    "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/"
-    "NotoSansSC-Regular.otf"
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/"
+    "NotoSansSC%5Bwght%5D.ttf"
 )
 
 
 def ensure_font() -> str:
-    FONT_DIR.mkdir(parents=True, exist_ok=True)
-    if not FONT_PATH.exists():
-        print("Downloading font for Chinese text...")
-        urlretrieve(FONT_URL, FONT_PATH)
+    font_override = os.getenv("SAMPLE_FONT_PATH")
+    if font_override:
+        override_path = Path(font_override)
+        if not override_path.is_file():
+            raise FileNotFoundError(f"SAMPLE_FONT_PATH not found: {override_path}")
+        font_path = override_path
+    else:
+        FONT_DIR.mkdir(parents=True, exist_ok=True)
+        font_path = FONT_PATH
+        if not font_path.exists():
+            print("Downloading font for Chinese text...")
+            try:
+                urlretrieve(FONT_URL, font_path)
+            except Exception as exc:
+                raise RuntimeError(
+                    "Failed to download Chinese font. "
+                    "Set SAMPLE_FONT_PATH to a local .ttf/.otf font file."
+                ) from exc
     font_name = "NotoSansSC"
-    pdfmetrics.registerFont(TTFont(font_name, str(FONT_PATH)))
+    pdfmetrics.registerFont(TTFont(font_name, str(font_path)))
     return font_name
 
 

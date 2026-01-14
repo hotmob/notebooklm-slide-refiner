@@ -40,6 +40,8 @@ pip install -e ".[dev]"
 python examples/generate_sample_pdf.py
 ```
 
+> 该脚本会下载中文字体（约 17MB）。如下载失败，可先手动下载字体并设置 `SAMPLE_FONT_PATH=/path/to/font.ttf`。
+
 2) **仅渲染 + PPTX（跳过 refine）**：
 
 ```bash
