@@ -16,14 +16,6 @@ from notebooklm_slide_refiner.assemble import assemble_pptx
 from notebooklm_slide_refiner.manifest import ManifestEntry, ManifestWriter
 from notebooklm_slide_refiner.render import render_pdf_page
 from notebooklm_slide_refiner.utils import Resolution, parse_pages
-from notebooklm_slide_refiner.vertex_refine import (
-    VertexConfig,
-    VertexRefineError,
-    build_vertex_config,
-    is_retryable_error,
-    load_prompt,
-    refine_with_vertex,
-)
 
 LOGGER = logging.getLogger("notebooklm_slide_refiner.flow")
 
@@ -117,6 +109,13 @@ def refine_page_task(
 
     start = time.monotonic()
     try:
+        from notebooklm_slide_refiner.vertex_refine import (
+            VertexConfig,
+            VertexRefineError,
+            is_retryable_error,
+            refine_with_vertex,
+        )
+
         refine_with_vertex(
             raw_path=raw_path,
             enhanced_path=enhanced_path,
@@ -249,6 +248,8 @@ async def build_deck_flow(
                 )
             )
     else:
+        from notebooklm_slide_refiner.vertex_refine import build_vertex_config, load_prompt
+
         vertex_config = build_vertex_config()
         prompt = load_prompt(remove_corner_marks=remove_corner_marks)
         semaphore = anyio.Semaphore(max(concurrency, 1))
