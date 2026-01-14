@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import anyio
+from dotenv import find_dotenv, load_dotenv
 
 from notebooklm_slide_refiner.flows import build_deck_flow
 from notebooklm_slide_refiner.utils import parse_resolution
@@ -48,6 +49,7 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
+    load_dotenv(find_dotenv(usecwd=True))
 
     parser = build_parser()
     args = parser.parse_args()
