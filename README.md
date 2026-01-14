@@ -133,7 +133,7 @@ python -m notebooklm_slide_refiner \
 
 `GeminiNanoBananaRefiner` 采用 HTTP 请求上传图片并传递 prompt。不同环境（Google AI Studio / Vertex AI）API 格式可能不同，需要根据具体端点调整：
 
-- 环境变量：`GEMINI_API_KEY`（API Key 或 Vertex 访问令牌）、`GEMINI_ENDPOINT`（可选）、`GEMINI_MODEL`（默认 nano-banana）、`GEMINI_CREDENTIALS`/`GOOGLE_APPLICATION_CREDENTIALS`（Vertex JSON，可选）
+- 环境变量：`GEMINI_API_KEY`（API Key 或 Vertex 访问令牌）、`GEMINI_ENDPOINT`（可选）、`GEMINI_MODEL`（默认 nano-banana）、`GEMINI_CREDENTIALS`/`GOOGLE_APPLICATION_CREDENTIALS`（Vertex JSON，可选）、`GEMINI_VERTEX_REGION`（自动生成 Vertex endpoint 时使用，默认 us-central1）
 - 代码位置：`notebooklm_slide_refiner/refine.py`
 - TODO：根据你的 endpoint 调整请求 URL/JSON 结构
 
@@ -141,17 +141,17 @@ Stub 模式默认可运行，不依赖外部 API。
 
 ### Vertex AI 使用说明（示例）
 
-如果使用 Vertex AI 的 Gemini API，请按你所在项目/区域设置 endpoint，并提供 OAuth2 访问令牌或 JSON 凭据文件（服务帐号/ADC）。以下示例展示两种常见方式（具体 endpoint 与鉴权方式可能因项目设置不同而变化）： 
+如果使用 Vertex AI 的 Gemini API，可提供 OAuth2 访问令牌或 JSON 凭据文件（服务帐号/ADC）。当提供 JSON 且未设置 `GEMINI_ENDPOINT` 时，会自动用 JSON 中的 project_id + `GEMINI_VERTEX_REGION`（默认 us-central1）生成 endpoint。以下示例展示两种常见方式（具体 endpoint 与鉴权方式可能因项目设置不同而变化）： 
 
 ```bash
-# 方式 A：使用服务帐号/ADC JSON
+# 方式 A：使用服务帐号/ADC JSON（自动生成 endpoint）
 export REFINER_MODE=gemini
 export GEMINI_MODEL=nano-banana
-# 将 ENDPOINT 替换为你的 project/region
-export GEMINI_ENDPOINT=https://REGION-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/REGION/publishers/google
 # 指向你的 JSON 凭据文件（二选一）
 export GEMINI_CREDENTIALS=/path/to/vertex-credentials.json
 # export GOOGLE_APPLICATION_CREDENTIALS=/path/to/vertex-credentials.json
+# 可选：设置 Vertex 区域（不设默认 us-central1）
+export GEMINI_VERTEX_REGION=REGION
 ```
 
 ```bash

@@ -57,7 +57,7 @@ def main() -> None:
 
     resolution = parse_resolution(args.resolution)
 
-    flow = build_deck_flow(
+    build_deck_flow(
         input_pdf=Path(args.input),
         out_dir=Path(args.out),
         resolution=resolution,
@@ -69,7 +69,6 @@ def main() -> None:
         remove_corner_marks=args.remove_corner_marks,
         keep_temp=args.keep_temp,
     )
-    flow()
 
 
 if __name__ == "__main__":

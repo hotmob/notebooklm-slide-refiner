@@ -13,6 +13,8 @@ from typing import Any
 import httpx
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "default.txt"
+DEFAULT_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
+DEFAULT_VERTEX_REGION = "us-central1"
 
 
 class Refiner(ABC):
@@ -113,21 +115,16 @@ def _is_vertex_endpoint(endpoint: str) -> bool:
     return "aiplatform.googleapis.com" in endpoint
 
 
-def _load_vertex_token() -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if api_key:
-        return api_key
-
+def _vertex_credentials_path() -> Path | None:
     credentials_path = os.getenv("GEMINI_CREDENTIALS") or os.getenv(
         "GOOGLE_APPLICATION_CREDENTIALS"
     )
     if not credentials_path:
-        raise RuntimeError(
-            "Vertex endpoint requires GEMINI_API_KEY (access token) or "
-            "GEMINI_CREDENTIALS/GOOGLE_APPLICATION_CREDENTIALS."
-        )
+        return None
+    return Path(credentials_path)
 
-    credentials_file = Path(credentials_path)
+
+def _load_vertex_credentials(credentials_file: Path) -> tuple[str, str | None]:
     if not credentials_file.is_file():
         raise RuntimeError(f"Credentials file not found: {credentials_file}")
 
@@ -141,11 +138,34 @@ def _load_vertex_token() -> str:
         ) from exc
 
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-    credentials, _ = load_credentials_from_file(str(credentials_file), scopes=scopes)
+    credentials, project_id = load_credentials_from_file(str(credentials_file), scopes=scopes)
     credentials.refresh(Request())
     if not credentials.token:
         raise RuntimeError("Failed to obtain access token from credentials file.")
-    return credentials.token
+    return credentials.token, project_id
+
+
+def _load_vertex_token(credentials_file: Path | None = None) -> str:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key:
+        return api_key
+
+    credentials_file = credentials_file or _vertex_credentials_path()
+    if not credentials_file:
+        raise RuntimeError(
+            "Vertex endpoint requires GEMINI_API_KEY (access token) or "
+            "GEMINI_CREDENTIALS/GOOGLE_APPLICATION_CREDENTIALS."
+        )
+
+    token, _ = _load_vertex_credentials(credentials_file)
+    return token
+
+
+def _build_vertex_endpoint(project_id: str, region: str) -> str:
+    return (
+        f"https://{region}-aiplatform.googleapis.com/v1/projects/{project_id}"
+        f"/locations/{region}/publishers/google"
+    )
 
 
 def get_refiner() -> Refiner:
@@ -155,9 +175,39 @@ def get_refiner() -> Refiner:
     if mode == "gemini":
         model = os.getenv("GEMINI_MODEL", "nano-banana")
         endpoint = os.getenv("GEMINI_ENDPOINT")
-        resolved_endpoint = endpoint or "https://generativelanguage.googleapis.com/v1beta"
-        if _is_vertex_endpoint(resolved_endpoint):
-            token = _load_vertex_token()
+        credentials_file = _vertex_credentials_path()
+
+        if endpoint:
+            resolved_endpoint = endpoint
+            if _is_vertex_endpoint(resolved_endpoint):
+                token = _load_vertex_token(credentials_file)
+                return GeminiNanoBananaRefiner(
+                    auth_token=token,
+                    model=model,
+                    endpoint=resolved_endpoint,
+                    use_oauth=True,
+                )
+
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                raise RuntimeError("GEMINI_API_KEY is required for gemini mode.")
+            return GeminiNanoBananaRefiner(
+                auth_token=api_key,
+                model=model,
+                endpoint=resolved_endpoint,
+            )
+
+        if credentials_file:
+            token, project_id = _load_vertex_credentials(credentials_file)
+            if not project_id:
+                raise RuntimeError(
+                    "Project ID not found in credentials file. "
+                    "Set GEMINI_ENDPOINT explicitly."
+                )
+            region = os.getenv("GEMINI_VERTEX_REGION", DEFAULT_VERTEX_REGION).strip()
+            if not region:
+                raise RuntimeError("GEMINI_VERTEX_REGION is empty.")
+            resolved_endpoint = _build_vertex_endpoint(project_id, region)
             return GeminiNanoBananaRefiner(
                 auth_token=token,
                 model=model,
@@ -165,6 +215,7 @@ def get_refiner() -> Refiner:
                 use_oauth=True,
             )
 
+        resolved_endpoint = DEFAULT_ENDPOINT
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY is required for gemini mode.")
