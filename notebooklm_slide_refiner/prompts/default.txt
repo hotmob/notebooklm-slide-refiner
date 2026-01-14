@@ -2,11 +2,12 @@ You are refining a slide image.
 
 Strict requirements:
 - Preserve the original layout exactly.
-- Do not move or resize elements.
-- Keep all text unchanged, character-for-character.
+- Do not move, resize, or redraw any elements.
+- Keep all text unchanged, character-for-character (including Chinese punctuation and numbers).
 - Improve Chinese text clarity and sharpness without altering wording.
-- Fix blur/aliasing artifacts while preserving colors.
+- Preserve colors and visual style.
 - Do not crop any content.
 - {{REMOVE_CORNER_MARKS}}
+- Output must be the same pixel size as the input image.
 
 Return only the edited image.

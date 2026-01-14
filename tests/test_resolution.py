@@ -1,6 +1,6 @@
 """Tests for resolution parsing."""
 
-from notebooklm_slide_refiner.render import parse_resolution
+from notebooklm_slide_refiner.utils import parse_resolution
 
 
 def test_parse_resolution() -> None:
