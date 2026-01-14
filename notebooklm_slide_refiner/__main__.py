@@ -6,6 +6,8 @@ import argparse
 import logging
 from pathlib import Path
 
+from dotenv import find_dotenv, load_dotenv
+
 from notebooklm_slide_refiner.flows import build_deck_flow
 from notebooklm_slide_refiner.render import parse_resolution
 
@@ -45,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    load_dotenv(find_dotenv(usecwd=True))
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",

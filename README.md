@@ -68,6 +68,16 @@ python -m notebooklm_slide_refiner --input ./examples/sample.pdf --out ./output 
 - `./output/deck.pptx`
 
 > 默认 `REFINER_MODE=stub`，不会调用外部 API，直接复制 raw -> enhanced（用于验收标准 1）。
+>
+> CLI 会自动加载当前工作目录（向上查找）的 `.env`，环境变量优先级为「终端已设置」> `.env`。例如：
+>
+> ```bash
+> # .env
+> REFINER_MODE=gemini
+> GEMINI_API_KEY=your_key
+> GEMINI_MODEL=nano-banana
+> # GEMINI_ENDPOINT=your_endpoint
+> ```
 
 ## CLI 参数
 
