@@ -127,6 +127,21 @@ python -m notebooklm_slide_refiner \
 
 Stub 模式默认可运行，不依赖外部 API。
 
+### Vertex AI 使用说明（示例）
+
+如果使用 Vertex AI 的 Gemini API，请按你所在项目/区域设置 endpoint，并提供访问令牌。以下示例展示一种常见的配置方式（具体 endpoint 与鉴权方式可能因项目设置不同而变化）： 
+
+```bash
+export REFINER_MODE=gemini
+export GEMINI_MODEL=nano-banana
+# 将 ENDPOINT 替换为你的 project/region
+export GEMINI_ENDPOINT=https://REGION-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/REGION/publishers/google
+# 将 token 放在 GEMINI_API_KEY 中（或替换为服务帐号生成的 token）
+export GEMINI_API_KEY=$(gcloud auth print-access-token)
+```
+
+> 注意：Vertex AI 可能需要使用 OAuth2 访问令牌而不是 API Key。你需要在 `notebooklm_slide_refiner/refine.py` 中按 Vertex AI 的要求调整请求 URL 与 payload 结构。
+
 ## 架构概览
 
 - Flow：`build_deck_flow`
