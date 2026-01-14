@@ -1,125 +1,157 @@
 # notebooklm-slide-refiner
 
-Turn NotebookLM-generated PDFs into presentation-ready slides — crisp Chinese text, consistent layout, zero manual tweaking.
+将 NotebookLM 导出的 PDF 幻灯片批量渲染为统一 16:9 PNG，并可通过 Gemini Nano Banana 进行图像优化，最后组装成 PPTX。项目以 Prefect 3.6.10 编排，支持并发、重试与断点续跑。
 
-⸻
+## 特性
 
-✨ What This Project Does
+- Prefect 3.6.10 Flow + Tasks，支持并发/重试/断点续跑
+- PDF -> 统一 16:9 PNG（letterbox 处理，不裁切）
+- Gemini Nano Banana 图像编辑可选（stub 模式默认可运行）
+- 失败页 manifest 输出（JSONL）
+- PPTX 输出：每页一张 PNG 全屏铺满
 
-NotebookLM can generate great content, but its exported slides often suffer from:
-	•	Blurry Chinese text
-	•	Inconsistent rendering across platforms
-	•	Hard-to-edit layouts
-	•	Page footers or visual artifacts not suitable for presentations
+## 环境要求
 
-notebooklm-slide-refiner solves this by introducing a deterministic, automatable post-processing pipeline.
+- Python 3.10+
+- Prefect == 3.6.10
 
-⸻
+## 安装
 
-🧠 Core Idea
-
-Instead of trying to “fix” PPT files directly, this project uses a more robust strategy:
-
-PDF → High-resolution images → AI visual refinement → Clean PPT
-
-This approach avoids font, encoding, and layout issues — especially for Chinese content.
-
-⸻
-
-🏗️ Pipeline Overview
-	1.	Render
-Convert each page of a NotebookLM-exported PDF into a fixed-aspect PNG (16:9, 1080p or 4K)
-	2.	Refine
-Use Gemini Nano Banana image editing to:
-	•	Preserve original layout and colors
-	•	Sharpen Chinese text
-	•	Improve visual clarity
-	•	Remove page footers or corner marks (optional, content-owner only)
-	3.	Assemble
-Rebuild a PowerPoint file with one refined image per slide
-	4.	Orchestrate
-Use Prefect for parallelism, retries, rate limiting, and resumability
-
-⸻
-
-🔧 Tech Stack
-	•	Python 3.10+
-	•	Prefect 2.x – workflow orchestration
-	•	PyMuPDF – PDF rendering
-	•	Pillow / OpenCV – image processing
-	•	python-pptx – slide assembly
-	•	Gemini API (Nano Banana) – image refinement
-  
-⸻
-
-📁 Project Structure
-
-```
-notebooklm-slide-refiner/
-├─ flows/
-│  └─ notebooklm_pipeline.py
-├─ tasks/
-│  ├─ render_pdf.py
-│  ├─ refine_image.py
-│  └─ assemble_ppt.py
-├─ lib/
-│  ├─ layout.py
-│  ├─ prompts.py
-│  └─ manifest.py
-├─ configs/
-│  └─ default.yaml
-└─ README.md
-```
-
-⸻
-
-🚀 Quick Start
+推荐使用 `uv` 或 `venv`：
 
 ```bash
-pip install -r requirements.txt
-prefect server start
-python flows/notebooklm_pipeline.py \
-  --input notebooklm.pdf \
-  --output slides.pptx
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e .
 ```
 
-⸻
+开发依赖：
 
-🖼️ Prompt Design Philosophy
+```bash
+pip install -e ".[dev]"
+```
 
-Image refinement prompts are designed to be strictly layout-preserving:
-	•	No reflow or re-layout
-	•	No text rewriting
-	•	No visual “creativity”
-	•	Focus on clarity, sharpness, and fidelity
+## 最小示例（强制验收命令）
 
-This makes the output suitable for investor decks, reports, and formal presentations.
+1) 生成示例 PDF（3 页，含中文/表格/图形）：
 
-⸻
+```bash
+python examples/generate_sample_pdf.py
+```
 
-⚠️ Notes on Content Ownership
+2) **仅渲染 + PPTX（跳过 refine）**：
 
-This project assumes you own or have the right to modify the content you process.
+```bash
+python -m notebooklm_slide_refiner --input ./examples/sample.pdf --out ./output --resolution 1920x1080 --skip-refine
+```
 
-If a PDF contains platform-imposed watermarks or copyright indicators, ensure that your usage complies with the source platform’s terms.
+期望输出：
 
-⸻
+- `./output/pages/raw/page_0001.png` ...
+- `./output/deck.pptx`
 
-🛣️ Roadmap
-	•	Page-type detection (title / table / dense text)
-	•	Multi-language optimization presets
-	•	Optional OCR → editable PPT mode
-	•	Web UI (Prefect + simple frontend)
+3) **启用 Gemini Nano Banana refine**（需配置环境变量）：
 
-⸻
+```bash
+export REFINER_MODE=gemini
+export GEMINI_API_KEY=your_key
+export GEMINI_MODEL=nano-banana
+# 可选：export GEMINI_ENDPOINT=your_endpoint
 
-🤝 Contributing
+python -m notebooklm_slide_refiner --input ./examples/sample.pdf --out ./output --resolution 3840x2160
+```
 
-PRs and issues are welcome.
-This project favors clarity, determinism, and reproducibility over “magic”.
+期望输出：
 
-⸻
+- `./output/pages/enhanced/page_0001.png` ...
+- `./output/deck.pptx`
 
-📜 License
+> 默认 `REFINER_MODE=stub`，不会调用外部 API，直接复制 raw -> enhanced（用于验收标准 1）。
+
+## CLI 参数
+
+```bash
+python -m notebooklm_slide_refiner \
+  --input ./examples/sample.pdf \
+  --out ./output \
+  --resolution 1920x1080 \
+  --dpi 200 \
+  --concurrency 5 \
+  --rps 2 \
+  --pages 1-3,5 \
+  --skip-refine \
+  --remove-corner-marks true \
+  --keep-temp true
+```
+
+- `--input`：PDF 路径（必填）
+- `--out`：输出目录（必填）
+- `--resolution`：目标分辨率（默认 1920x1080）
+- `--dpi`：渲染 DPI（可选）
+- `--concurrency`：refine 并发数（默认 5）
+- `--rps`：refine 请求速率上限（默认 2 次/秒）
+- `--skip-refine`：跳过 refine，仅渲染 + PPTX
+- `--pages`：页码过滤（如 `1-3,5,7-9`）
+- `--remove-corner-marks`：是否移除角标（影响 prompt）
+- `--keep-temp`：保留中间文件（默认 true）
+
+## 断点续跑
+
+- 若 `pages/raw/page_0005.png` 已存在，则跳过该页 render。
+- 若 `pages/enhanced/page_0005.png` 已存在，则跳过该页 refine。
+
+## 失败重试
+
+- Gemini 调用对 429/5xx 进行指数退避重试（至少 5 次）。
+- 失败页写入 `output/manifest.jsonl`，流程结束时输出失败清单。
+
+## 输出 manifest
+
+`output/manifest.jsonl` 为逐行 JSON，字段：
+
+- `page_index`
+- `raw_path`
+- `enhanced_path`
+- `status`
+- `duration_ms`
+- `error`
+
+## Gemini Nano Banana 适配说明
+
+`GeminiNanoBananaRefiner` 采用 HTTP 请求上传图片并传递 prompt。不同环境（Google AI Studio / Vertex AI）API 格式可能不同，需要根据具体端点调整：
+
+- 环境变量：`GEMINI_API_KEY`、`GEMINI_ENDPOINT`（可选）、`GEMINI_MODEL`（默认 nano-banana）
+- 代码位置：`notebooklm_slide_refiner/refine.py`
+- TODO：根据你的 endpoint 调整请求 URL/JSON 结构
+
+Stub 模式默认可运行，不依赖外部 API。
+
+### Vertex AI 使用说明（示例）
+
+如果使用 Vertex AI 的 Gemini API，请按你所在项目/区域设置 endpoint，并提供访问令牌。以下示例展示一种常见的配置方式（具体 endpoint 与鉴权方式可能因项目设置不同而变化）： 
+
+```bash
+export REFINER_MODE=gemini
+export GEMINI_MODEL=nano-banana
+# 将 ENDPOINT 替换为你的 project/region
+export GEMINI_ENDPOINT=https://REGION-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/REGION/publishers/google
+# 将 token 放在 GEMINI_API_KEY 中（或替换为服务帐号生成的 token）
+export GEMINI_API_KEY=$(gcloud auth print-access-token)
+```
+
+> 注意：Vertex AI 可能需要使用 OAuth2 访问令牌而不是 API Key。你需要在 `notebooklm_slide_refiner/refine.py` 中按 Vertex AI 的要求调整请求 URL 与 payload 结构。
+
+## 架构概览
+
+- Flow：`build_deck_flow`
+- Tasks：`render_page_task`、`refine_page_task`、`assemble_ppt_task`
+- 关键模块：
+  - `render.py`：PDF 渲染 + letterbox
+  - `refine.py`：refiner 抽象层与 Gemini 实现
+  - `assemble.py`：PPTX 组装
+  - `manifest.py`：manifest 写入
+
+## License
 
 MIT

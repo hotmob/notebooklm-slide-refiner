@@ -1,0 +1,46 @@
+[project]
+name = "notebooklm-slide-refiner"
+version = "0.1.0"
+description = "Refine NotebookLM-exported slide PDFs into enhanced images and a PPTX deck using Prefect 3."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Your Name", email = "you@example.com" }]
+keywords = ["prefect", "notebooklm", "slides", "pptx", "pdf"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+dependencies = [
+  "prefect==3.6.10",
+  "PyMuPDF>=1.23.0",
+  "Pillow>=10.0.0",
+  "python-pptx>=0.6.23",
+  "httpx>=0.27.0",
+  "reportlab>=4.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/notebooklm-slide-refiner"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
