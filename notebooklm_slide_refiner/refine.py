@@ -34,10 +34,17 @@ class StubRefiner(Refiner):
 class GeminiNanoBananaRefiner(Refiner):
     """Gemini Nano Banana image editor refiner."""
 
-    def __init__(self, api_key: str, model: str, endpoint: str | None = None) -> None:
-        self.api_key = api_key
+    def __init__(
+        self,
+        auth_token: str,
+        model: str,
+        endpoint: str | None = None,
+        use_oauth: bool = False,
+    ) -> None:
+        self.auth_token = auth_token
         self.model = model
         self.endpoint = endpoint or "https://generativelanguage.googleapis.com/v1beta"
+        self.use_oauth = use_oauth
 
     def refine(self, raw_path: Path, enhanced_path: Path, prompt: str) -> None:
         enhanced_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,7 +52,12 @@ class GeminiNanoBananaRefiner(Refiner):
         encoded = base64.b64encode(image_bytes).decode("utf-8")
 
         # TODO: Adapt request body for your Gemini/Vertex endpoint.
-        url = f"{self.endpoint}/models/{self.model}:generateContent?key={self.api_key}"
+        url = f"{self.endpoint}/models/{self.model}:generateContent"
+        headers = None
+        if self.use_oauth:
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+        else:
+            url = f"{url}?key={self.auth_token}"
         payload: dict[str, Any] = {
             "contents": [
                 {
@@ -63,7 +75,7 @@ class GeminiNanoBananaRefiner(Refiner):
         }
 
         with httpx.Client(timeout=120) as client:
-            response = client.post(url, json=payload)
+            response = client.post(url, json=payload, headers=headers)
             if response.status_code != 200:
                 raise GeminiAPIError(
                     status_code=response.status_code,
@@ -97,17 +109,70 @@ def load_prompt(remove_corner_marks: bool) -> str:
     return template.replace("{{REMOVE_CORNER_MARKS}}", corner_text)
 
 
+def _is_vertex_endpoint(endpoint: str) -> bool:
+    return "aiplatform.googleapis.com" in endpoint
+
+
+def _load_vertex_token() -> str:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key:
+        return api_key
+
+    credentials_path = os.getenv("GEMINI_CREDENTIALS") or os.getenv(
+        "GOOGLE_APPLICATION_CREDENTIALS"
+    )
+    if not credentials_path:
+        raise RuntimeError(
+            "Vertex endpoint requires GEMINI_API_KEY (access token) or "
+            "GEMINI_CREDENTIALS/GOOGLE_APPLICATION_CREDENTIALS."
+        )
+
+    credentials_file = Path(credentials_path)
+    if not credentials_file.is_file():
+        raise RuntimeError(f"Credentials file not found: {credentials_file}")
+
+    try:
+        from google.auth import load_credentials_from_file
+        from google.auth.transport.requests import Request
+    except ImportError as exc:
+        raise RuntimeError(
+            "google-auth is required to use credentials JSON. "
+            "Install it with `pip install google-auth`."
+        ) from exc
+
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+    credentials, _ = load_credentials_from_file(str(credentials_file), scopes=scopes)
+    credentials.refresh(Request())
+    if not credentials.token:
+        raise RuntimeError("Failed to obtain access token from credentials file.")
+    return credentials.token
+
+
 def get_refiner() -> Refiner:
     """Get refiner based on environment variables."""
 
     mode = os.getenv("REFINER_MODE", "stub").lower()
     if mode == "gemini":
+        model = os.getenv("GEMINI_MODEL", "nano-banana")
+        endpoint = os.getenv("GEMINI_ENDPOINT")
+        resolved_endpoint = endpoint or "https://generativelanguage.googleapis.com/v1beta"
+        if _is_vertex_endpoint(resolved_endpoint):
+            token = _load_vertex_token()
+            return GeminiNanoBananaRefiner(
+                auth_token=token,
+                model=model,
+                endpoint=resolved_endpoint,
+                use_oauth=True,
+            )
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY is required for gemini mode.")
-        model = os.getenv("GEMINI_MODEL", "nano-banana")
-        endpoint = os.getenv("GEMINI_ENDPOINT")
-        return GeminiNanoBananaRefiner(api_key=api_key, model=model, endpoint=endpoint)
+        return GeminiNanoBananaRefiner(
+            auth_token=api_key,
+            model=model,
+            endpoint=resolved_endpoint,
+        )
     return StubRefiner()
 
 
