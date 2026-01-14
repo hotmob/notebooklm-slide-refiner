@@ -4,21 +4,14 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 from pathlib import Path
 
+import anyio
 from dotenv import find_dotenv, load_dotenv
 
 from notebooklm_slide_refiner.flows import build_deck_flow
-from notebooklm_slide_refiner.render import parse_resolution
-
-
-def parse_bool(value: str) -> bool:
-    normalized = value.strip().lower()
-    if normalized in {"true", "1", "yes", "y"}:
-        return True
-    if normalized in {"false", "0", "no", "n"}:
-        return False
-    raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
+from notebooklm_slide_refiner.utils import parse_resolution
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,38 +19,45 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", required=True, help="Input PDF path")
     parser.add_argument("--out", required=True, help="Output directory")
     parser.add_argument("--resolution", default="1920x1080", help="Target resolution WxH")
-    parser.add_argument("--dpi", type=int, default=None, help="Render DPI")
+    parser.add_argument("--dpi", type=int, default=200, help="Render DPI")
     parser.add_argument("--concurrency", type=int, default=5, help="Refine concurrency")
     parser.add_argument("--rps", type=float, default=2.0, help="Refine requests per second")
-    parser.add_argument("--skip-refine", action="store_true", help="Skip refine stage")
-    parser.add_argument("--pages", default=None, help="Page range like 1-3,5,7-9")
+    parser.add_argument("--skip-refine", action="store_true", help="Skip Vertex refine")
     parser.add_argument(
         "--remove-corner-marks",
-        type=parse_bool,
+        action=argparse.BooleanOptionalAction,
         default=True,
-        help="Remove corner marks in prompt",
+    )
+    parser.add_argument("--pages", default=None, help="Page range like 1-3,5,7-9")
+    parser.add_argument(
+        "--background",
+        default="black",
+        choices=["black", "edge_mean"],
+        help="Letterbox background color",
     )
     parser.add_argument(
-        "--keep-temp",
-        type=parse_bool,
-        default=True,
-        help="Keep intermediate files",
+        "--allow-partial",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Allow partial output when pages fail",
     )
     return parser
 
 
 def main() -> None:
-    load_dotenv(find_dotenv(usecwd=True))
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
+    load_dotenv(find_dotenv(usecwd=True))
+
     parser = build_parser()
     args = parser.parse_args()
 
     resolution = parse_resolution(args.resolution)
 
-    build_deck_flow(
+    outcome = anyio.run(
+        build_deck_flow,
         input_pdf=Path(args.input),
         out_dir=Path(args.out),
         resolution=resolution,
@@ -67,8 +67,12 @@ def main() -> None:
         skip_refine=args.skip_refine,
         pages=args.pages,
         remove_corner_marks=args.remove_corner_marks,
-        keep_temp=args.keep_temp,
+        background=args.background,
+        allow_partial=args.allow_partial,
     )
+
+    if outcome.failures and not args.allow_partial:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
