@@ -7,7 +7,7 @@ from pathlib import Path
 from pptx import Presentation
 from pptx.util import Emu
 
-from notebooklm_slide_refiner.render import Resolution
+from notebooklm_slide_refiner.utils import Resolution
 
 EMU_PER_PIXEL = 9525
 

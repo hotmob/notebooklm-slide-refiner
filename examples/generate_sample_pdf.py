@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from urllib.request import urlretrieve
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import landscape
@@ -12,36 +11,17 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-FONT_DIR = Path(__file__).parent / "fonts"
-FONT_PATH = FONT_DIR / "NotoSansSC-Variable.ttf"
-FONT_URL = (
-    "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/"
-    "NotoSansSC%5Bwght%5D.ttf"
-)
-
 
 def ensure_font() -> str:
     font_override = os.getenv("SAMPLE_FONT_PATH")
     if font_override:
-        override_path = Path(font_override)
-        if not override_path.is_file():
-            raise FileNotFoundError(f"SAMPLE_FONT_PATH not found: {override_path}")
-        font_path = override_path
-    else:
-        FONT_DIR.mkdir(parents=True, exist_ok=True)
-        font_path = FONT_PATH
-        if not font_path.exists():
-            print("Downloading font for Chinese text...")
-            try:
-                urlretrieve(FONT_URL, font_path)
-            except Exception as exc:
-                raise RuntimeError(
-                    "Failed to download Chinese font. "
-                    "Set SAMPLE_FONT_PATH to a local .ttf/.otf font file."
-                ) from exc
-    font_name = "NotoSansSC"
-    pdfmetrics.registerFont(TTFont(font_name, str(font_path)))
-    return font_name
+        font_path = Path(font_override)
+        if not font_path.is_file():
+            raise FileNotFoundError(f"SAMPLE_FONT_PATH not found: {font_path}")
+        font_name = "SampleFont"
+        pdfmetrics.registerFont(TTFont(font_name, str(font_path)))
+        return font_name
+    return "Helvetica"
 
 
 def draw_table(cnv: canvas.Canvas, x: float, y: float, rows: int, cols: int) -> None:
@@ -96,6 +76,12 @@ def main() -> None:
     cnv.setFont(font_name, 16)
     cnv.drawString(80, height - 460, "简单图形用于测试渲染和排版")
     cnv.save()
+
+    if font_name == "Helvetica":
+        print(
+            "Sample PDF generated without a Chinese font. "
+            "Set SAMPLE_FONT_PATH to a .ttf/.otf font for better results."
+        )
 
     print(f"Sample PDF generated at {output_path}")
 
