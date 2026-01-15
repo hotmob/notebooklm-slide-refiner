@@ -45,7 +45,7 @@ def build_vertex_config() -> VertexConfig:
     project = os.getenv("GOOGLE_CLOUD_PROJECT")
     if not project:
         raise RuntimeError("GOOGLE_CLOUD_PROJECT is required for Vertex refine.")
-    location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
     return VertexConfig(project=project, location=location)
 
 
