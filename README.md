@@ -42,7 +42,7 @@ python -m notebooklm_slide_refiner --input ./examples/sample.pdf --out ./output 
 ## Vertex 环境变量
 
 - `GOOGLE_CLOUD_PROJECT`：可选。若未设置，将尝试从 `GOOGLE_APPLICATION_CREDENTIALS` 的 `project_id` 读取
-- `GOOGLE_CLOUD_LOCATION`：默认 `us-central1`
+- `GOOGLE_CLOUD_LOCATION`：默认 `global`
 - `GOOGLE_APPLICATION_CREDENTIALS`：服务账号 JSON 路径，或使用 `gcloud auth application-default login`
 - `VERTEX_MODEL_NAME`：可选，Vertex 模型名（默认 `gemini-3-pro-image-preview`）
 
