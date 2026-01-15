@@ -191,7 +191,7 @@ async def build_deck_flow(
             )
             continue
         try:
-            rendered_path, duration_ms = await render_page_task(
+            rendered_path, duration_ms = render_page_task(
                 pdf_path=input_pdf,
                 page_index=page_index,
                 raw_path=raw_path,
@@ -276,7 +276,7 @@ async def build_deck_flow(
             try:
                 async with semaphore:
                     await rate_limiter.acquire()
-                    refined_path, _duration_ms = await refine_page_task(
+                    refined_path, _duration_ms = refine_page_task(
                         raw_path=raw_path,
                         enhanced_path=enhanced_path,
                         prompt=prompt,
@@ -356,7 +356,7 @@ async def build_deck_flow(
     pptx_path = out_dir / "deck.pptx"
     pptx_output: Path | None = None
     if image_paths:
-        pptx_output = await assemble_ppt_task(
+        pptx_output = assemble_ppt_task(
             image_paths=image_paths, pptx_path=pptx_path, resolution=resolution
         )
     else:
