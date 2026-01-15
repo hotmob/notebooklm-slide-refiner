@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from functools import partial
 from pathlib import Path
 
 import anyio
@@ -56,7 +57,7 @@ def main() -> None:
 
     resolution = parse_resolution(args.resolution)
 
-    outcome = anyio.run(
+    flow_runner = partial(
         build_deck_flow,
         input_pdf=Path(args.input),
         out_dir=Path(args.out),
@@ -70,6 +71,10 @@ def main() -> None:
         background=args.background,
         allow_partial=args.allow_partial,
     )
+    outcome = anyio.run(flow_runner)
+
+    if outcome.failures and not args.allow_partial:
+        sys.exit(1)
 
     if outcome.failures and not args.allow_partial:
         sys.exit(1)
