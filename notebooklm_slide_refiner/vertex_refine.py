@@ -110,7 +110,7 @@ def refine_with_vertex(
                 types.Content(
                     role="user",
                     parts=[
-                        types.Part.from_text(prompt),
+                        types.Part.from_text(text=prompt),
                         types.Part.from_bytes(data=image_bytes, mime_type="image/png"),
                     ],
                 )
