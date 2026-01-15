@@ -2,7 +2,7 @@
 
 from PIL import Image
 
-from notebooklm_slide_refiner.render import Resolution, letterbox_image
+from notebooklm_slide_refiner.utils import Resolution, letterbox_image
 
 
 def test_letterbox_size() -> None:
