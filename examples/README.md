@@ -6,4 +6,4 @@ Generate a sample PDF used by the README:
 python generate_sample_pdf.py
 ```
 
-The script will download an open-source font (Noto Sans SC) if not present so Chinese text can render consistently.
+The script will download an open-source font (Noto Sans SC) if not present so Chinese text can render consistently. Set `SAMPLE_FONT_PATH=/path/to/font.ttf` to override the font.

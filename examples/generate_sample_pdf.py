@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import urllib.request
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -10,6 +11,12 @@ from reportlab.lib.pagesizes import landscape
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
+
+
+FONT_URL = (
+    "https://github.com/googlefonts/noto-cjk/raw/main/Sans/Variable/TTF/"
+    "NotoSansSC-Variable.ttf"
+)
 
 
 def ensure_font() -> str:
@@ -21,7 +28,17 @@ def ensure_font() -> str:
         font_name = "SampleFont"
         pdfmetrics.registerFont(TTFont(font_name, str(font_path)))
         return font_name
-    return "Helvetica"
+
+    font_dir = Path(__file__).parent / "fonts"
+    font_dir.mkdir(parents=True, exist_ok=True)
+    font_path = font_dir / "NotoSansSC-Variable.ttf"
+    if not font_path.is_file():
+        print(f"Downloading font to {font_path} ...")
+        urllib.request.urlretrieve(FONT_URL, font_path)
+
+    font_name = "SampleFont"
+    pdfmetrics.registerFont(TTFont(font_name, str(font_path)))
+    return font_name
 
 
 def draw_table(cnv: canvas.Canvas, x: float, y: float, rows: int, cols: int) -> None:
@@ -76,12 +93,6 @@ def main() -> None:
     cnv.setFont(font_name, 16)
     cnv.drawString(80, height - 460, "简单图形用于测试渲染和排版")
     cnv.save()
-
-    if font_name == "Helvetica":
-        print(
-            "Sample PDF generated without a Chinese font. "
-            "Set SAMPLE_FONT_PATH to a .ttf/.otf font for better results."
-        )
 
     print(f"Sample PDF generated at {output_path}")
 

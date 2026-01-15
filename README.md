@@ -48,6 +48,6 @@ python -m notebooklm_slide_refiner --input ./examples/sample.pdf --out ./output 
 ## 常见问题
 
 - **为什么 sample.pdf 中文显示为方块？**
-  `examples/generate_sample_pdf.py` 默认使用系统字体。可设置 `SAMPLE_FONT_PATH=/path/to/font.ttf` 指向开源字体（例如 Noto Sans SC），再重新生成 sample.pdf。
+  `examples/generate_sample_pdf.py` 会自动下载并使用 Noto Sans SC 字体（保存到 `examples/fonts/`）。若下载失败，可设置 `SAMPLE_FONT_PATH=/path/to/font.ttf` 指向本地字体，再重新生成 sample.pdf。
 - **断点续跑如何工作？**
   若 `out/pages/raw/page_0001.png` 存在则跳过渲染；若 `out/pages/enhanced/page_0001.png` 存在则跳过 refine。
