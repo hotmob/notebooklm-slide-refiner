@@ -76,6 +76,9 @@ def main() -> None:
     if outcome.failures and not args.allow_partial:
         sys.exit(1)
 
+    if outcome.failures and not args.allow_partial:
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
