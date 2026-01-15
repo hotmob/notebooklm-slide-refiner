@@ -1,13 +1,14 @@
-You are refining a slide image.
+You are a professional digital image restoration expert specializing in high-resolution slide presentations. Your task is to take the provided slide image and restore it to pristine, presentation-quality condition.
 
-Strict requirements:
-- Preserve the original layout exactly.
-- Do not move, resize, or redraw any elements.
-- Keep all text unchanged, character-for-character (including Chinese punctuation and numbers).
-- Improve Chinese text clarity and sharpness without altering wording.
-- Preserve colors and visual style.
-- Do not crop any content.
-- {{REMOVE_CORNER_MARKS}}
-- Output must be the same pixel size as the input image.
+**Restoration Objectives:**
 
-Return only the edited image.
+1.  **Targeted Artifact Removal (Watermarks):** Identify and completely remove any "NotebookLM" watermarks, logos, or corner marks. Reconstruct the background in those areas seamlessly so the removal is invisible. This is the ONLY content that should be removed.
+2.  **Content Upscaling and Clarification (Text Focus):** The input image suffers from compression artifacts and blur. You must sharpen all text elements, particularly Chinese characters, to achieve crisp, vector-like edge definition.
+    * *Constraint:* You are cleaning the pixels of the existing text, NOT replacing the font. The character shapes, weight, and style must remain identical to the original, just much sharper.
+3.  **Strict Fidelity Preservation:** Apart from the actions above, the integrity of the original slide must be perfectly maintained.
+    * Layout, position, and scale of all elements must not shift by even one pixel.
+    * Text content must be character-for-character identical (including punctuation/numbers).
+    * Original color palette and background styling must be preserved exactly.
+    * No cropping. The output dimension must match the input dimension exactly.
+
+**Final Requirement:** Output only the restored, high-fidelity image.

@@ -80,7 +80,9 @@ def is_retryable_error(exc: Exception) -> bool:
     return bool(status_code == 429 or (status_code and 500 <= status_code <= 599))
 
 
-def _extract_image_bytes(response: types.GenerateContentResponse) -> bytes:
+def _extract_image_bytes_from_generate(
+    response: types.GenerateContentResponse,
+) -> bytes:
     for candidate in response.candidates or []:
         if not candidate.content:
             continue
@@ -93,6 +95,26 @@ def _extract_image_bytes(response: types.GenerateContentResponse) -> bytes:
                 if isinstance(data, str):
                     return base64.b64decode(data)
     raise RuntimeError("Vertex response did not include image bytes.")
+
+
+def _extract_image_bytes_from_edit(response: types.EditImageResponse) -> bytes:
+    for generated in response.generated_images or []:
+        image = generated.image
+        if not image or not image.image_bytes:
+            continue
+        return image.image_bytes
+    raise RuntimeError("Vertex edit response did not include image bytes.")
+
+
+def _extract_text_response(response: types.GenerateContentResponse) -> str | None:
+    for candidate in response.candidates or []:
+        if not candidate.content:
+            continue
+        for part in candidate.content.parts or []:
+            text = getattr(part, "text", None)
+            if text:
+                return text
+    return None
 
 
 def refine_with_vertex(
@@ -123,6 +145,36 @@ def refine_with_vertex(
             ],
             config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
         )
+        output_bytes = _extract_image_bytes_from_generate(response)
+    except RuntimeError as exc:
+        if "did not include image bytes" not in str(exc):
+            raise
+        try:
+            edit_response = client.models.edit_image(
+                model=model_name,
+                prompt=prompt,
+                reference_images=[
+                    {
+                        "reference_image": {
+                            "image_bytes": image_bytes,
+                            "mime_type": "image/png",
+                        }
+                    }
+                ],
+            )
+            output_bytes = _extract_image_bytes_from_edit(edit_response)
+        except Exception as edit_exc:  # noqa: BLE001 - normalize genai client errors
+            status_code = getattr(edit_exc, "status_code", None)
+            text_response = _extract_text_response(response)
+            message = str(edit_exc)
+            if status_code == 404 or "NOT_FOUND" in message:
+                message = (
+                    f"Vertex model not found or access denied: {model_name}. "
+                    f"Set {MODEL_ENV_VAR} to a model available to your project."
+                )
+            if text_response:
+                message = f"{message} Response text: {text_response}"
+            raise VertexRefineError(message, status_code=status_code) from edit_exc
     except gcp_exceptions.GoogleAPICallError as exc:  # pragma: no cover - passthrough
         status_code = getattr(exc, "status_code", None)
         raise VertexRefineError(str(exc), status_code=status_code) from exc
@@ -135,6 +187,4 @@ def refine_with_vertex(
                 f"Set {MODEL_ENV_VAR} to a model available to your project."
             )
         raise VertexRefineError(message, status_code=status_code) from exc
-
-    output_bytes = _extract_image_bytes(response)
     enhanced_path.write_bytes(output_bytes)
