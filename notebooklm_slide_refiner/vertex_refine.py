@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,7 +45,25 @@ def load_prompt(remove_corner_marks: bool) -> str:
 def build_vertex_config() -> VertexConfig:
     project = os.getenv("GOOGLE_CLOUD_PROJECT")
     if not project:
-        raise RuntimeError("GOOGLE_CLOUD_PROJECT is required for Vertex refine.")
+        credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if credentials_path:
+            credentials_file = Path(credentials_path)
+            if not credentials_file.is_file():
+                raise RuntimeError(
+                    f"GOOGLE_APPLICATION_CREDENTIALS not found: {credentials_file}"
+                )
+            try:
+                payload = json.loads(credentials_file.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise RuntimeError(
+                    f"Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS: {credentials_file}"
+                ) from exc
+            project = payload.get("project_id")
+    if not project:
+        raise RuntimeError(
+            "GOOGLE_CLOUD_PROJECT is required for Vertex refine. "
+            "If unset, provide GOOGLE_APPLICATION_CREDENTIALS with a project_id."
+        )
     location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
     return VertexConfig(project=project, location=location)
 
