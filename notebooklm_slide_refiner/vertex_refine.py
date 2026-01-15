@@ -12,7 +12,8 @@ from google.api_core import exceptions as gcp_exceptions
 from google.genai import types
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "default.txt"
-MODEL_NAME = "gemini-3-pro-image-preview"
+MODEL_ENV_VAR = "VERTEX_MODEL_NAME"
+MODEL_NAME_DEFAULT = "gemini-3-pro-image-preview"
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,10 @@ def build_vertex_config() -> VertexConfig:
         raise RuntimeError("GOOGLE_CLOUD_PROJECT is required for Vertex refine.")
     location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
     return VertexConfig(project=project, location=location)
+
+
+def get_model_name() -> str:
+    return os.getenv(MODEL_ENV_VAR, MODEL_NAME_DEFAULT)
 
 
 def is_retryable_error(exc: Exception) -> bool:
@@ -102,10 +107,11 @@ def refine_with_vertex(
     image_bytes = raw_path.read_bytes()
 
     client = genai.Client(vertexai=True, project=config.project, location=config.location)
+    model_name = get_model_name()
 
     try:
         response = client.models.generate_content(
-            model=MODEL_NAME,
+            model=model_name,
             contents=[
                 types.Content(
                     role="user",
@@ -120,6 +126,15 @@ def refine_with_vertex(
     except gcp_exceptions.GoogleAPICallError as exc:  # pragma: no cover - passthrough
         status_code = getattr(exc, "status_code", None)
         raise VertexRefineError(str(exc), status_code=status_code) from exc
+    except Exception as exc:  # noqa: BLE001 - normalize genai client errors
+        status_code = getattr(exc, "status_code", None)
+        message = str(exc)
+        if status_code == 404 or "NOT_FOUND" in message:
+            message = (
+                f"Vertex model not found or access denied: {model_name}. "
+                f"Set {MODEL_ENV_VAR} to a model available to your project."
+            )
+        raise VertexRefineError(message, status_code=status_code) from exc
 
     output_bytes = _extract_image_bytes(response)
     enhanced_path.write_bytes(output_bytes)

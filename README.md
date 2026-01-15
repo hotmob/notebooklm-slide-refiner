@@ -1,6 +1,6 @@
 # notebooklm-slide-refiner
 
-将 NotebookLM 导出的 PDF 幻灯片批量渲染为统一 16:9 PNG，可选通过 Vertex AI（`gemini-3-pro-image-preview`）进行图像编辑，并组装成 PPTX。内置 Prefect 3.6.10 编排，支持断点续跑、并发、重试与限流。
+将 NotebookLM 导出的 PDF 幻灯片批量渲染为统一 16:9 PNG，可选通过 Vertex AI（默认 `gemini-3-pro-image-preview`，可通过 `VERTEX_MODEL_NAME` 覆盖）进行图像编辑，并组装成 PPTX。内置 Prefect 3.6.10 编排，支持断点续跑、并发、重试与限流。
 
 ## 安装
 
@@ -44,6 +44,7 @@ python -m notebooklm_slide_refiner --input ./examples/sample.pdf --out ./output 
 - `GOOGLE_CLOUD_PROJECT`：必填
 - `GOOGLE_CLOUD_LOCATION`：默认 `us-central1`
 - `GOOGLE_APPLICATION_CREDENTIALS`：服务账号 JSON 路径，或使用 `gcloud auth application-default login`
+- `VERTEX_MODEL_NAME`：可选，Vertex 模型名（默认 `gemini-3-pro-image-preview`）
 
 ## 常见问题
 
