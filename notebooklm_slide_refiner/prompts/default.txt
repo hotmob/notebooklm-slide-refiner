@@ -1,14 +1,6 @@
-You are a professional digital image restoration expert specializing in high-resolution slide presentations. Your task is to take the provided slide image and restore it to pristine, presentation-quality condition.
+Reconstruct this image to publishing-quality high definition. Strictly maintain the original 16:9 aspect ratio, layout logic, and color scheme. Eliminate all noise and blur.
+Primary Goal: Readability. Re-render all text to be vector-sharp and extremely crisp. Replace any illegible text with the exact original content using a modern, clean sans-serif font.
+Specific Edit: Remove the text 'NotebookLM' and corner marks.
+Constraint: Do not change the background color. Ensure uniform background color is preserved. Use anti-aliasing for all edges. No artifacts.
 
-**Restoration Objectives:**
-
-1.  **Targeted Artifact Removal (Watermarks):** Identify and completely remove any "NotebookLM" watermarks, logos, or corner marks. Reconstruct the background in those areas seamlessly so the removal is invisible. This is the ONLY content that should be removed.
-2.  **Content Upscaling and Clarification (Text Focus):** The input image suffers from compression artifacts and blur. You must sharpen all text elements, particularly Chinese characters, to achieve crisp, vector-like edge definition.
-    * *Constraint:* You are cleaning the pixels of the existing text, NOT replacing the font. The character shapes, weight, and style must remain identical to the original, just much sharper.
-3.  **Strict Fidelity Preservation:** Apart from the actions above, the integrity of the original slide must be perfectly maintained.
-    * Layout, position, and scale of all elements must not shift by even one pixel.
-    * Text content must be character-for-character identical (including punctuation/numbers).
-    * Original color palette and background styling must be preserved exactly.
-    * No cropping. The output dimension must match the input dimension exactly.
-
-**Final Requirement:** Output only the restored, high-fidelity image.
+{{REMOVE_CORNER_MARKS}}

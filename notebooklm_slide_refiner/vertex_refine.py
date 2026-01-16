@@ -168,6 +168,14 @@ def refine_with_vertex(
     except RuntimeError as exc:
         if "did not include image bytes" not in str(exc):
             raise
+        
+        # Check for refusal text before falling back (which likely fails with 404/500)
+        text_response = _extract_text_response(response)
+        if text_response:
+             raise VertexRefineError(
+                f"Vertex model refused the request: {text_response}"
+            ) from exc
+
         try:
             edit_response = client.models.edit_image(
                 model=model_name,
@@ -184,15 +192,15 @@ def refine_with_vertex(
             output_bytes = _extract_image_bytes_from_edit(edit_response)
         except Exception as edit_exc:  # noqa: BLE001 - normalize genai client errors
             status_code = getattr(edit_exc, "status_code", None)
-            text_response = _extract_text_response(response)
             message = str(edit_exc)
             if status_code == 404 or "NOT_FOUND" in message:
                 message = (
                     f"Vertex model not found or access denied: {model_name}. "
                     f"Set {MODEL_ENV_VAR} to a model available to your project."
                 )
-            if text_response:
-                message = f"{message} Response text: {text_response}"
+            # We already checked text_response above, but keep this for edit_image failure context if needed
+            # text_response = _extract_text_response(response) 
+            # if text_response: ... 
             raise VertexRefineError(message, status_code=status_code) from edit_exc
     except gcp_exceptions.GoogleAPICallError as exc:  # pragma: no cover - passthrough
         status_code = getattr(exc, "status_code", None)
