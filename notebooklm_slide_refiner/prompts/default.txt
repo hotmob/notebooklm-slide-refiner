@@ -1,6 +1,9 @@
-Reconstruct this image to publishing-quality high definition. Strictly maintain the original 16:9 aspect ratio, layout logic, and color scheme. Eliminate all noise and blur.
-Primary Goal: Readability. Re-render all text to be vector-sharp and extremely crisp. Replace any illegible text with the exact original content using a modern, clean sans-serif font.
-Specific Edit: Remove the text 'NotebookLM' and corner marks.
-Constraint: Do not change the background color. Ensure uniform background color is preserved. Use anti-aliasing for all edges. No artifacts.
+Complete Text Regeneration Task.
+1. Read all text in the image (Title, Bullets, Content).
+2. Completely discard the original text pixels which are low resolution.
+3. Re-render the exact same text content using a new, high-definition, breakdown-proof sans-serif font.
+4. Maintain the original layout position and background exactly.
+5. Constraint: The Output MUST be crystal clear vector quality. No blur allowed.
+6. Remove 'NotebookLM' and 'Page 1'.
 
 {{REMOVE_CORNER_MARKS}}
