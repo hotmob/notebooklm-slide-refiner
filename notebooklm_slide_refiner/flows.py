@@ -105,6 +105,7 @@ def refine_page_task(
     prompt: str,
     project: str,
     location: str,
+    text_content: str | None = None,
 ) -> tuple[Path, int]:
     """Refine a raw PNG into an enhanced PNG via Vertex."""
 
@@ -121,7 +122,10 @@ def refine_page_task(
             raw_path=raw_path,
             enhanced_path=enhanced_path,
             prompt=prompt,
+            enhanced_path=enhanced_path,
+            prompt=prompt,
             config=VertexConfig(project=project, location=location),
+            text_content=text_content,
         )
     except VertexRefineError as exc:
         if not is_retryable_error(exc):
@@ -140,7 +144,19 @@ def assemble_ppt_task(
     """Assemble PPTX from image paths."""
 
     assemble_pptx(image_paths, pptx_path, resolution)
+    assemble_pptx(image_paths, pptx_path, resolution)
     return pptx_path
+
+
+@task(name="extract_text_task")
+def extract_text_task(pdf_path: Path, page_index: int, out_path: Path) -> Path:
+    """Extract text from a PDF page to a text file."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with fitz.open(pdf_path) as doc:
+        page = doc.load_page(page_index)
+        text = page.get_text("text") or ""
+    out_path.write_text(text.strip(), encoding="utf-8")
+    return out_path
 
 
 @flow(name="build_deck_flow")
@@ -155,7 +171,10 @@ async def build_deck_flow(
     pages: str | None = None,
     remove_corner_marks: bool = True,
     background: str = "black",
+    background: str = "black",
     allow_partial: bool = False,
+    extract_text: bool = False,
+    use_text_files: bool = False,
 ) -> FlowOutcome:
     """Render PDF pages, optionally refine images, and assemble PPTX."""
 
@@ -165,6 +184,9 @@ async def build_deck_flow(
     out_dir.mkdir(parents=True, exist_ok=True)
     raw_dir = out_dir / "pages" / "raw"
     enhanced_dir = out_dir / "pages" / "enhanced"
+    raw_dir = out_dir / "pages" / "raw"
+    enhanced_dir = out_dir / "pages" / "enhanced"
+    texts_dir = out_dir / "texts"
     manifest_path = out_dir / "manifest.jsonl"
 
     with fitz.open(input_pdf) as doc:
@@ -178,6 +200,18 @@ async def build_deck_flow(
 
     render_outcomes: list[RenderOutcome] = []
     render_failures: dict[int, str] = {}
+
+    # Extraction Mode
+    if extract_text:
+        LOGGER.info("Running in Text Extraction Mode...")
+        for page_index in page_indices:
+            text_path = texts_dir / f"page_{page_index + 1:04d}.txt"
+            try:
+                extract_text_task(input_pdf, page_index, text_path)
+                LOGGER.info("Extracted text for page %d to %s", page_index + 1, text_path)
+            except Exception as exc:
+                LOGGER.error("Failed to extract text for page %d: %s", page_index + 1, exc)
+        return FlowOutcome(failures=[], pptx_path=None)
 
     for page_index in page_indices:
         raw_path = raw_dir / f"page_{page_index + 1:04d}.png"
@@ -280,6 +314,15 @@ async def build_deck_flow(
 
         async def refine_one(page_index: int, raw_path: Path) -> None:
             enhanced_path = enhanced_dir / f"page_{page_index + 1:04d}.png"
+            
+            text_content: str | None = None
+            if use_text_files:
+                text_path = texts_dir / f"page_{page_index + 1:04d}.txt"
+                if text_path.exists():
+                    text_content = text_path.read_text(encoding="utf-8")
+                else:
+                    LOGGER.warning("Text file not found for page %d: %s", page_index + 1, text_path)
+
             if enhanced_path.exists():
                 # Check if existing image matches target resolution
                 matches_resolution = False
@@ -321,6 +364,7 @@ async def build_deck_flow(
                         prompt=prompt,
                         project=vertex_config.project,
                         location=vertex_config.location,
+                        text_content=text_content,
                     )
                 duration_ms = int((time.monotonic() - start) * 1000)
                 outcome = RefineOutcome(

@@ -146,11 +146,16 @@ def refine_with_vertex(
     enhanced_path: Path,
     prompt: str,
     config: VertexConfig,
+    text_content: str | None = None,
 ) -> None:
     """Call Vertex Gemini image editing and write enhanced PNG."""
 
     enhanced_path.parent.mkdir(parents=True, exist_ok=True)
     image_bytes = raw_path.read_bytes()
+    
+    if text_content:
+        # Inject the refined text content explicitly into the prompt
+        prompt += f"\n\n[文本替换内容]:\n{text_content}\n\nStrictly use the above text content for the slide."
 
     client = genai.Client(vertexai=True, project=config.project, location=config.location)
     model_name = get_model_name()

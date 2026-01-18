@@ -42,6 +42,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Allow partial output when pages fail",
     )
+    parser.add_argument(
+        "--extract-text",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Extract text from PDF pages to text files",
+    )
+    parser.add_argument(
+        "--use-text-files",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Use extracted text files for refinement prompt",
+    )
     return parser
 
 
@@ -69,7 +81,10 @@ def main() -> None:
         pages=args.pages,
         remove_corner_marks=args.remove_corner_marks,
         background=args.background,
+        background=args.background,
         allow_partial=args.allow_partial,
+        extract_text=args.extract_text,
+        use_text_files=args.use_text_files,
     )
     outcome = anyio.run(flow_runner)
 
