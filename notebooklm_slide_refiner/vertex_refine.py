@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,8 @@ from google.genai import types
 PROMPT_PATH = Path(__file__).parent / "prompts" / "default.txt"
 MODEL_ENV_VAR = "VERTEX_MODEL_NAME"
 MODEL_NAME_DEFAULT = "gemini-3-pro-image-preview"
+
+LOGGER = logging.getLogger("notebooklm_slide_refiner.vertex")
 
 
 @dataclass(frozen=True)
@@ -153,6 +156,7 @@ def refine_with_vertex(
     model_name = get_model_name()
 
     try:
+        LOGGER.info("Refining %s with model %s", raw_path.name, model_name)
         response = client.models.generate_content(
             model=model_name,
             contents=[
@@ -164,7 +168,27 @@ def refine_with_vertex(
                     ],
                 )
             ],
-            config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE"],
+                safety_settings=[
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HATE_SPEECH",
+                        threshold="BLOCK_NONE",
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold="BLOCK_NONE",
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold="BLOCK_NONE",
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HARASSMENT",
+                        threshold="BLOCK_NONE",
+                    ),
+                ],
+            ),
         )
         output_bytes = _extract_image_bytes_from_generate(response)
     except RuntimeError as exc:
@@ -178,6 +202,12 @@ def refine_with_vertex(
                 f"Vertex model refused the request: {text_response}"
             ) from exc
 
+        LOGGER.warning(
+            "generate_content failed to return image (likely filtered). "
+            "Falling back to edit_image for %s. Error: %s",
+            raw_path.name,
+            exc,
+        )
         try:
             edit_response = client.models.edit_image(
                 model=model_name,
