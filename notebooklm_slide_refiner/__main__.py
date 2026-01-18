@@ -81,15 +81,11 @@ def main() -> None:
         pages=args.pages,
         remove_corner_marks=args.remove_corner_marks,
         background=args.background,
-        background=args.background,
         allow_partial=args.allow_partial,
         extract_text=args.extract_text,
         use_text_files=args.use_text_files,
     )
     outcome = anyio.run(flow_runner)
-
-    if outcome.failures and not args.allow_partial:
-        sys.exit(1)
 
     if outcome.failures and not args.allow_partial:
         sys.exit(1)

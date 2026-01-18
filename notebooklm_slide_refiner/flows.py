@@ -122,8 +122,6 @@ def refine_page_task(
             raw_path=raw_path,
             enhanced_path=enhanced_path,
             prompt=prompt,
-            enhanced_path=enhanced_path,
-            prompt=prompt,
             config=VertexConfig(project=project, location=location),
             text_content=text_content,
         )
@@ -143,7 +141,6 @@ def assemble_ppt_task(
 ) -> Path:
     """Assemble PPTX from image paths."""
 
-    assemble_pptx(image_paths, pptx_path, resolution)
     assemble_pptx(image_paths, pptx_path, resolution)
     return pptx_path
 
@@ -171,7 +168,6 @@ async def build_deck_flow(
     pages: str | None = None,
     remove_corner_marks: bool = True,
     background: str = "black",
-    background: str = "black",
     allow_partial: bool = False,
     extract_text: bool = False,
     use_text_files: bool = False,
@@ -182,8 +178,6 @@ async def build_deck_flow(
         raise FileNotFoundError(f"Input PDF not found: {input_pdf}")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    raw_dir = out_dir / "pages" / "raw"
-    enhanced_dir = out_dir / "pages" / "enhanced"
     raw_dir = out_dir / "pages" / "raw"
     enhanced_dir = out_dir / "pages" / "enhanced"
     texts_dir = out_dir / "texts"
