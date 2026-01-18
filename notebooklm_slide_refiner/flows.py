@@ -11,6 +11,7 @@ import anyio
 import fitz
 from prefect import flow, task
 from prefect.tasks import exponential_backoff
+from PIL import Image
 
 from notebooklm_slide_refiner.assemble import assemble_pptx
 from notebooklm_slide_refiner.manifest import ManifestEntry, ManifestWriter
@@ -181,15 +182,34 @@ async def build_deck_flow(
     for page_index in page_indices:
         raw_path = raw_dir / f"page_{page_index + 1:04d}.png"
         if raw_path.exists():
-            render_outcomes.append(
-                RenderOutcome(
-                    page_index=page_index,
-                    raw_path=raw_path,
-                    duration_ms=0,
-                    status="skipped_render",
+            # Check if existing image matches target resolution
+            matches_resolution = False
+            try:
+                with Image.open(raw_path) as img:
+                    if img.size == (resolution.width, resolution.height):
+                        matches_resolution = True
+                    else:
+                        LOGGER.info(
+                            "Resolution mismatch for page %d: expected %dx%d, got %dx%d. Re-rendering.",
+                            page_index + 1,
+                            resolution.width,
+                            resolution.height,
+                            img.width,
+                            img.height,
+                        )
+            except Exception:
+                LOGGER.warning("Could not verify resolution of %s. Re-rendering.", raw_path)
+
+            if matches_resolution:
+                render_outcomes.append(
+                    RenderOutcome(
+                        page_index=page_index,
+                        raw_path=raw_path,
+                        duration_ms=0,
+                        status="skipped_render",
+                    )
                 )
-            )
-            continue
+                continue
         try:
             rendered_path, duration_ms = render_page_task(
                 pdf_path=input_pdf,
@@ -261,16 +281,35 @@ async def build_deck_flow(
         async def refine_one(page_index: int, raw_path: Path) -> None:
             enhanced_path = enhanced_dir / f"page_{page_index + 1:04d}.png"
             if enhanced_path.exists():
-                outcome = RefineOutcome(
-                    page_index=page_index,
-                    enhanced_path=enhanced_path,
-                    output_path=enhanced_path,
-                    duration_ms=0,
-                    status="skipped_refine",
-                    error=None,
-                )
-                await send_channel.send(outcome)
-                return
+                # Check if existing image matches target resolution
+                matches_resolution = False
+                try:
+                    with Image.open(enhanced_path) as img:
+                        if img.size == (resolution.width, resolution.height):
+                            matches_resolution = True
+                        else:
+                            LOGGER.info(
+                                "Resolution mismatch for enhanced page %d: expected %dx%d, got %dx%d. Re-refining.",
+                                page_index + 1,
+                                resolution.width,
+                                resolution.height,
+                                img.width,
+                                img.height,
+                            )
+                except Exception:
+                    LOGGER.warning("Could not verify resolution of %s. Re-refining.", enhanced_path)
+
+                if matches_resolution:
+                    outcome = RefineOutcome(
+                        page_index=page_index,
+                        enhanced_path=enhanced_path,
+                        output_path=enhanced_path,
+                        duration_ms=0,
+                        status="skipped_refine",
+                        error=None,
+                    )
+                    await send_channel.send(outcome)
+                    return
 
             start = time.monotonic()
             try:

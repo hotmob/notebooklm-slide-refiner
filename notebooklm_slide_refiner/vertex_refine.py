@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from PIL import Image
 from google import genai
 from google.api_core import exceptions as gcp_exceptions
 from google.genai import types
@@ -214,4 +216,17 @@ def refine_with_vertex(
                 f"Set {MODEL_ENV_VAR} to a model available to your project."
             )
         raise VertexRefineError(message, status_code=status_code) from exc
-    enhanced_path.write_bytes(output_bytes)
+
+    # Enforce resolution match with raw image
+    try:
+        with Image.open(raw_path) as raw_img:
+            target_size = raw_img.size
+
+        with Image.open(io.BytesIO(output_bytes)) as generated_img:
+            if generated_img.size != target_size:
+                resized_img = generated_img.resize(target_size, Image.Resampling.LANCZOS)
+                resized_img.save(enhanced_path, format="PNG")
+            else:
+                enhanced_path.write_bytes(output_bytes)
+    except Exception as exc:
+        raise VertexRefineError(f"Failed to process image resolution: {exc}") from exc
